@@ -18,7 +18,7 @@
     var _this = this;
 
     // 事件对象
-    var events = !('ontouchend' in document) ? {
+    var events = !(navigator.userAgent.indexOf('Mobile') !== -1) ? {
       mousedown: _handleStart,
       mousemove: _handleMove,
       mouseup: _handleEnd
@@ -35,7 +35,8 @@
       scratchWidth: 20,
       scratchImg: '',
       scratchColor: '#ccc',
-      onScratchRatio: function () {}
+      onScratchRatio: function () {},
+      onImgFilled: function () {}
     };
 
     _assign(_option, option);
@@ -76,20 +77,22 @@
 
     // 初始化
     function _init() {
+
       // 设置目标元素为父级元素
       _option.scratchTarget.style.position = 'relative';
-
-      // 添加 canvas 到目标元素中
-      _option.scratchTarget.appendChild(canvas);
 
       // 设置 canvas 宽高
       canvas.width = _option.scratchTarget.clientWidth;
       canvas.height = _option.scratchTarget.clientHeight;
 
+      // 添加 canvas 到目标元素中
+      _option.scratchTarget.appendChild(canvas);
+
       // 定位 canvas 覆盖目标区域
       canvas.style.position = 'absolute';
       canvas.style.top = 0;
       canvas.style.left = 0;
+      canvas.style.zIndex = 10;
 
       // 设置画笔
       ctx.lineWidth = _option.scratchWidth;
@@ -104,6 +107,7 @@
         image.src = _option.scratchImg;
         image.addEventListener('load', function (e) {
           _fillImg(this);
+          _option.onImgFilled();
         });
       } else {
         _fillColor();
@@ -111,9 +115,9 @@
     }
 
     function _fillImg(image) {
-      var sx = (image.width - canvas.width) / 2;
-      var sy = (image.height - canvas.height) / 2;
-      ctx.drawImage(image, sx, sy, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+
+      // 计算图片比例
+      ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
       _segGlobalCompositeOperation();
     }
 
@@ -126,6 +130,7 @@
     // 设置 globalCompositeOperation
     function _segGlobalCompositeOperation() {
       ctx.globalCompositeOperation = 'destination-out';
+
       // 显示目标元素
       _option.scratchTarget.style.opacity = 1;
     }
@@ -166,10 +171,17 @@
 
     // 根据事件对象获取鼠标坐标
     function _getPoint(e) {
-      return {
-        x: e.pageX - _option.scratchTarget.offsetLeft,
-        y: e.pageY - _option.scratchTarget.offsetTop
+      var point = {}
+
+      if (e.offsetX) {
+        point.x = e.offsetX
+        point.y = e.offsetY
+      } else {
+        point.x = e.pageX - _option.scratchTarget.offsetLeft
+        point.y = e.pageY - _option.scratchTarget.offsetTop
       }
+
+      return point
     }
 
     // 计算刮奖比率
